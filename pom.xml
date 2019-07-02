@@ -15,7 +15,8 @@
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<bnd.version>4.2.0</bnd.version>
+		<bnd.version>4.3.0-SNAPSHOT</bnd.version>
+		<templates.dir>file://home/stbischof/dev/git/mambo/org.bipolis/templates</templates.dir>
 	</properties>
 
 	<repositories>
@@ -30,6 +31,16 @@
 				<enabled>true</enabled>
 			</snapshots>
 		</repository>
+			<repository>
+			<id>Apache Releases</id>
+			<url>https://repo1.maven.org/maven2</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
+		</repository>
 		<repository>
 			<id>Apache Snapshots</id>
 			<url>https://repository.apache.org/content/groups/snapshots/</url>
@@ -42,11 +53,12 @@
 		</repository>
 	</repositories>
 
+
 	<pluginRepositories>
 		<pluginRepository>
 			<id>Bnd Snapshots</id>
 			<name>Bnd Latest build</name>
-			<url>https://bndtools.ci.cloudbees.com/job/bnd.master/lastSuccessfulBuild/artifact/dist/bundles/</url>
+			<url>https://oss.sonatype.org/content/repositories/snapshots/</url>
 			<releases>
 				<enabled>false</enabled>
 			</releases>
@@ -56,40 +68,41 @@
 		</pluginRepository>
 	</pluginRepositories>
 
+
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
-				<groupId>org.osgi.enroute</groupId>
-				<artifactId>osgi-api</artifactId>
-				<version>7.0.0</version>
+				<groupId>org.bipolis</groupId>
+				<artifactId>org.bipolis.indexes.osgi-api</artifactId>
+				<version>0.0.1-SNAPSHOT</version>
 				<type>pom</type>
 				<scope>provided</scope>
 			</dependency>
 			<dependency>
-				<groupId>org.osgi.enroute</groupId>
-				<artifactId>enterprise-api</artifactId>
-				<version>7.0.0</version>
+				<groupId>org.bipolis</groupId>
+				<artifactId>org.bipolis.indexes.enterprise-api</artifactId>
+				<version>0.0.1-SNAPSHOT</version>
 				<type>pom</type>
 				<scope>provided</scope>
 			</dependency>
 			<dependency>
-				<groupId>org.osgi.enroute</groupId>
-				<artifactId>impl-index</artifactId>
-				<version>7.0.0</version>
+				<groupId>org.bipolis</groupId>
+				<artifactId>org.bipolis.indexes.osgi-impl</artifactId>
+				<version>0.0.1-SNAPSHOT</version>
 				<type>pom</type>
 				<scope>runtime</scope>
 			</dependency>
 			<dependency>
-				<groupId>org.osgi.enroute</groupId>
-				<artifactId>debug-bundles</artifactId>
-				<version>7.0.0</version>
+				<groupId>org.bipolis</groupId>
+				<artifactId>org.bipolis.indexes.debug-bundles</artifactId>
+				<version>0.0.1-SNAPSHOT</version>
 				<type>pom</type>
 				<scope>test</scope>
 			</dependency>
 			<dependency>
-				<groupId>org.osgi.enroute</groupId>
-				<artifactId>test-bundles</artifactId>
-				<version>7.0.0</version>
+				<groupId>org.bipolis</groupId>
+				<artifactId>org.bipolis.indexes.test-bundles</artifactId>
+				<version>0.0.1-SNAPSHOT</version>
 				<type>pom</type>
 				<scope>test</scope>
 			</dependency>
@@ -106,7 +119,8 @@
 					<version>${bnd.version}</version>
 					<configuration>
 						<bnd><![CDATA[
-Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-SymbolicName: ${project.artifactId}
+Test-Cases: ${classes;CONCRETE;ANNOTATED;org.junit.Test}
 -sources: true
 -contract: *
 ]]></bnd>
@@ -235,6 +249,22 @@ Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
 							</goals>
 						</execution>
 					</executions>
+				</plugin>
+				<plugin>
+					<groupId>biz.aQute.bnd</groupId>
+					<artifactId>bnd-reporter-maven-plugin</artifactId>
+					<version>${bnd.version}</version>
+					<configuration>
+						<reports>
+							<report>
+								<outputFile>readme.md</outputFile>
+								<templateFile>${templates.dir}/readme.twig</templateFile>
+								<parameters>
+									<templateDir>${templates.dir}</templateDir>
+								</parameters>
+							</report>
+						</reports>
+					</configuration>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>

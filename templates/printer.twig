@@ -1,0 +1,315 @@
+{# 
+# TITLE
+#}
+{% macro printTitle (title, level, iconUrl) -%}
+{% for i in [1..level] %}#{% endfor %} {{(not empty(iconUrl))?'![]('~iconUrl~') ':''}}{{- title }}
+{%- endmacro %}
+
+{# 
+# MAVEN COORDINATE
+#}
+{% macro printMavenCoordinate (mavenCoordinate, prefix) -%}
+```xml
+{{ prefix }}<dependency>
+{{ prefix }}    <groupId>{{- mavenCoordinate.groupId -}}</groupId>
+{{ prefix }}    <artifactId>{{- mavenCoordinate.artifactId -}}</artifactId>
+{{ prefix }}    <version>{{- mavenCoordinate.version -}}</version>
+{{ prefix }}</dependency>
+{{ prefix }}```
+{%- endmacro %}
+
+{# 
+# OSGI COORDINATE
+#}
+{% macro printOsgiCoordinate (symbolicName, version, prefix) -%}
+{% import _self as this -%}
+```
+{{ prefix }}Bundle Symbolic Name: {{ symbolicName }}
+{{ prefix }}Version             : {{ this.printOsgiVersion(version) }}
+{{ prefix }}```
+{%- endmacro %}
+
+{# 
+# OSGI VERSION
+#}
+{% macro printOsgiVersion (osgiVersion) -%}
+{{ osgiVersion.major }}{{ '.'~osgiVersion.minor }}{{ '.'~osgiVersion.micro }}
+{%- if not empty(osgiVersion.qualifier) %}
+{{- '.'~osgiVersion.qualifier }}
+{%- endif %}
+{%- endmacro %}
+
+{# 
+# TABLE HEADER
+#}
+{% macro printTableHeaders (headers, layout, prefix) -%}
+{% for h in headers %}{{ (loop.first) ? '|'~h~' |' : h~' |' }}{% endfor %}
+{% if empty (layout) -%}
+{{ prefix }}{% for h in headers %}{{ (loop.first) ? '|--- |' : '--- |' }}{% endfor %}
+{%- else %}
+{%- set layoutTab = split(layout, '') -%}
+{{ prefix }}{% for l in layoutTab %}
+{%- if l == 'r' -%}
+{{ (loop.first) ? '|---: |' : '---: |' }}
+{%- elseif l == 'c' -%}
+{{ (loop.first) ? '|:---: |' : ':---: |' }}
+{%- else -%}
+{{ (loop.first) ? '|--- |' : '--- |' }}
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+{%- endmacro %}
+
+{# 
+# PROPERTY TYPE
+#}
+{% macro printPropertyType (type, multiValue) -%}
+{{ type }}{{ (multiValue) ? '[]' : ''}}
+{%- endmacro %}
+
+{# 
+# PROPERTY VALUES
+#}
+{% macro printPropertyValues (type, values, multiValue) -%}
+{%- if multiValue -%}
+{{ '[' }}{% for v in values %}{{ (loop.first) ? '' : ', ' }}{{ (type == 'String' ) ? '"'~v~'"' : v}}{% endfor %}{{ ']' }}
+{%- else -%}
+{{ (type == 'String' ) ? '"'~(values[0])~'"' : values[0] }}
+{%- endif -%}
+{%- endmacro %}
+
+{# 
+# OPTION
+#}
+{% macro printOptions (option) -%}
+{% for o in option %}{{ (loop.first) ? '' : ', ' }}{{ '"'~o.value~'"' }}{% endfor %}
+{%- endmacro %}
+
+{# 
+# COMPONENTS
+#}
+{% macro printComponents (components, metatypes) -%}
+{% import _self as this -%}
+{% for c in components -%}
+{% if loop.first -%}
+{{ this.printTitle(c.name,3) -}}
+{%- else %}
+
+---
+
+{{ this.printTitle(c.name,3) -}}
+{% endif -%}
+{{ (c.defaultEnabled) ? ' - `enabled`' : ' - `not enabled`' -}}
+{{ (c.immediate) ? ', `activation = immediate`' : ', `activation = delayed`' }}
+
+{% if length(c.serviceInterfaces) > 0 -%}
+{{ this.printTitle('Services - `scope = '~c.scope~'`',4) }}
+
+{{ this.printTableHeaders(['Interface name']) }}
+{%- for s in c.serviceInterfaces %}
+| {{ s }} |
+{%- endfor %}
+{%- else -%}
+{{ this.printTitle('Services',4) }}
+
+No services.
+{%- endif %}
+
+{{ this.printTitle('Properties',4) }}
+
+{% if length(c.properties) > 0 -%}
+{{ this.printTableHeaders(['Name','Type','Value']) }}
+{%- for key, value in c.properties %}
+| {{key}} | {{ this.printPropertyType(value.type,value.multiValue)}} | {{ this.printPropertyValues(value.type,value.values,value.multiValue) }} |
+{%- endfor %}
+{%- else -%}
+No properties.
+{%- endif %}
+
+{% if not (c.factory is null) -%}
+{{ this.printTitle('Configuration - `factory`',4) }}
+
+* **facory name**: {{ '`'~c.factory~'`'}}
+{%- elseif c.configurationPolicy == 'ignore' -%}
+{{ this.printTitle('Configuration',4) }}
+
+No configuration.
+{%- else -%}
+{{ this.printTitle('Configuration - `policy = '~c.configurationPolicy~'`',4) }}
+
+{% for pid in c.configurationPid %}
+{%- set pidOcd = "notset" -%}
+{%- set factoryPidOcd = "notset" -%}
+{%- for ocd in metatypes -%}
+{%- if pid in ocd.pids -%}
+{%- set pidOcd = ocd -%}
+{%- elseif pid in ocd.factoryPids -%}
+{%- set factoryPidOcd = ocd -%}
+{%- endif -%}
+{%- endfor -%}
+{%- set o = "notset" -%}
+{%- if pidOcd != 'notset' -%}
+{{ this.printTitle('Pid: `'~pid~'`',5) }}
+{%- set o = pidOcd -%}
+{%- elseif factoryPidOcd != 'notset' -%}
+{{ this.printTitle('Factory pid: `'~pid~'`',5) }}
+{%- set o = factoryPidOcd -%}
+{%- else -%}
+{{ this.printTitle('Pid: `'~pid~'`',5) }}
+No information available.
+{%- endif %}
+{%- if o != 'notset' -%}
+{% for a in o.attributes -%}
+{% if loop.first %}
+
+{% endif -%}
+{{ this.printTableHeaders(['Id','`'~a.id~'`']) }}
+| Required | **{{a.required}}** |
+| Type | **{{ this.printPropertyType(a.type,(a.cardinality != 0)) }}** |
+{%- if not empty(a.description) %}
+| Description | {{ a.description }} |
+{%- endif %}
+{%- if length(a.values) > 0 %}
+| Default | {{ this.printPropertyValues(a.type,a.values,(a.cardinality != 0)) }} |
+{%- endif %}
+{%- if (not empty(a.max)) or (not empty(a.min)) %}
+| Value restriction | `min = {{a.min}}` / `max = {{a.max}}` |
+{%- elseif length(a.options) > 0 %}
+| Value restriction | {{ this.printOptions(a.options) }} |
+{%- endif %}
+
+{% endfor %}
+{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endmacro %}
+
+{# 
+# DEVELOPERS
+#}
+{% macro printDevelopers (developers) -%}
+{% import _self as this -%}
+{% for d in developers %}
+{%- set email=d.email -%}
+{%- set id=d.identifier -%}
+{%- if empty(email) and id.contains('@') -%}
+{%- set email=id -%}
+{%- set id=null -%}
+{%- endif -%}
+{% if empty(id) -%}
+{% if empty(d.name) %}
+* [{{ trim(email) }}](mailto:{{ trim(email) }})
+{%- else %}
+* **{{ trim(d.name) }}** / [{{ trim(email) }}](mailto:{{ trim(email) }})
+{%- endif -%}
+{%- else -%}
+{% if empty(d.name) -%}
+{% if empty(email) %}
+* {{ trim(id) }}
+{%- else %}
+* {{ trim(id) }} / [{{ trim(email) }}](mailto:{{ trim(email) }})
+{%- endif -%}
+{%- else -%}
+{% if empty(email) %}
+* **{{ trim(d.name) }}** ({{ trim(id) }})
+{%- else %}
+* **{{ trim(d.name) }}** ({{ trim(id) }}) / [{{ trim(email) }}](mailto:{{ trim(email) }})
+{%- endif -%}
+{%- endif -%}
+{%- endif -%}
+{%- if not empty(d.organization) and not empty(d.organizationUrl) -%}
+{{ ' @ ' }}[{{d.organization}}]({{d.organizationUrl}})
+{%- elseif not empty(d.organization) and empty(d.organizationUrl) -%}
+{{ ' @ ' }}{{d.organization}}
+ {%- elseif empty(d.organization) and not empty(d.organizationUrl) -%}
+{{ ' @ ' }}[{{d.organizationUrl}}]({{d.organizationUrl}})
+{%- endif -%}
+{%- if length(d.roles) > 0 -%}
+{{ ' - ' }}{% for r in d.roles %}*{{r}}*{{ (loop.last) ? '' : ', '}}{% endfor %}
+{%- endif -%}
+{%- endfor %}
+{%- endmacro %}
+
+{# 
+# LICENCES
+#}
+{% macro printLicenses (licenses) -%}
+{% import _self as this -%}
+{% for l in licenses %}
+**{{ l.name }}**
+{%- if not empty(l.description) %}
+  > {{ l.description }}
+  > 
+{%- endif -%}
+{%- if not empty(l.link) %}
+  > For more information see [{{l.link}}]({{l.link}}).
+{%- endif %}
+{% endfor %}
+{%- endmacro %}
+
+{# 
+# ARTIFACTS
+#}
+{% macro printArtifacts (report) -%}
+{% import _self as this -%}
+{{ this.printArtifactsRecursive(report,'', '') }}
+{% endmacro %}
+
+{# 
+# ARTIFACTS RECURSIVE
+#}
+{% macro printArtifactsRecursive (report, prefix, path) -%}
+{% import _self as this -%}
+{% if not empty(report.projects) -%}
+{% for p in report.projects -%}
+{% set bundle = null -%}
+{% if not empty(p.bundles) %}{% set bundle = p.bundles[0] %}{% endif -%}
+{% set title = default(bundle.manifest.bundleName,p.commonInfo.name) -%}
+{% set title = default(title,bundle.manifest.bundleSymbolicName.symbolicName) -%}
+{% set title = default(title,p.fileName) -%}
+{% set description = default(bundle.manifest.bundleDescription,p.commonInfo.description) -%}
+{% if length(p.bundles) >1 %}{% set title = default(p.commonInfo.name,p.fileName) %}{% set description = p.commonInfo.description %}{% endif %}
+{{prefix}}* [**{{title}}**]({{ path~p.fileName }}){{ (not empty(description)) ? ': '~description : ''}}
+{%- if not empty(p.projects) or length(p.bundles) > 1 -%}{{ this.printArtifactsRecursive(p,pr~'  ', path~p.fileName~'/') }}{% endif -%}
+{% endfor -%}
+{% else -%}
+{% for b in report.bundles -%}
+{% set title = default(b.manifest.bundleName,b.manifest.bundleSymbolicName) -%}
+{% set description = b.manifest.bundleDescription %}
+{{prefix}}* [**{{title}}**]({{ path }}){{ (not empty(description)) ? ': '~description : ''}}
+{%- endfor -%}
+{% endif -%}
+{% endmacro %}
+
+{# 
+# CODE SNIPPETS
+#}
+{% macro printCodeSnippets (codeSnippets) -%}
+{% import _self as this -%}
+{% for cs in codeSnippets -%}
+{% if not empty(cs.title) %}
+{{ this.printTitle(cs.title, 3) }}
+{% endif -%}
+{% if not empty(cs.description) %}
+{{ cs.description -}}
+{% endif -%}
+{% if empty(cs.steps) %}
+```{{ cs.programmingLanguage }}
+{{ cs.codeSnippet }}
+```
+{% else %}
+{% for s in cs.steps %}
+{% if not empty(s.title) %}
+{{ this.printTitle(s.title, 4) }}
+{%- endif %}
+{% if not empty(s.description) %}
+{{ s.description }}
+{%- endif %}
+```{{ s.programmingLanguage }}
+{{ s.codeSnippet }}
+```
+{% endfor %}
+{%- endif %}
+{% endfor %}
+{%- endmacro %}
