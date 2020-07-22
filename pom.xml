@@ -23,7 +23,7 @@
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<bnd.version>4.3.0-SNAPSHOT</bnd.version>
+		<bnd.version>5.1.2</bnd.version>
 	</properties>
 	<repositories>
 		<repository>
