@@ -1,0 +1,24 @@
+version: 2
+updates:
+- package-ecosystem: maven
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: org.mockito:mockito-core
+    versions:
+    - 3.7.7
+    - 3.8.0
+  - dependency-name: org.apache.aries.jax.rs:org.apache.aries.jax.rs.whiteboard
+    versions:
+    - 1.1.0
+  - dependency-name: biz.aQute.bnd:biz.aQute.tester.junit-platform
+    versions:
+    - 5.2.0
+  - dependency-name: org.eclipse.platform:org.eclipse.equinox.event
+    versions:
+    - 1.5.500
+  - dependency-name: org.apache.maven.plugins:maven-checkstyle-plugin
+    versions:
+    - 3.1.1
